@@ -6,16 +6,18 @@ import com.neuralquark.hackernewsclient.data.model.Story
 import com.neuralquark.hackernewsclient.data.model.StoryCategory
 import com.neuralquark.hackernewsclient.data.repository.HackerNewsRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
+import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import javax.inject.Inject
 
 data class NewsListUiState(
-    val stories: List<Story> = emptyList(),
     val isLoading: Boolean = false,
     val isRefreshing: Boolean = false,
     val error: String? = null,
@@ -23,13 +25,14 @@ data class NewsListUiState(
     val newStoriesCount: Int = 0
 )
 
+@OptIn(ExperimentalCoroutinesApi::class)
 @HiltViewModel
 class NewsListViewModel @Inject constructor(
     private val repository: HackerNewsRepository
 ) : ViewModel() {
     
     private val _selectedCategory = MutableStateFlow(StoryCategory.TOP)
-    private val _isLoading = MutableStateFlow(false)
+    private val _isLoading = MutableStateFlow(true)
     private val _isRefreshing = MutableStateFlow(false)
     private val _error = MutableStateFlow<String?>(null)
     
@@ -40,7 +43,6 @@ class NewsListViewModel @Inject constructor(
         _error,
         repository.newStoriesAvailable
     ) { category, isLoading, isRefreshing, error, newStoriesMap ->
-        val stories = repository.getStoriesByCategory(category)
         NewsListUiState(
             isLoading = isLoading,
             isRefreshing = isRefreshing,
@@ -54,35 +56,51 @@ class NewsListViewModel @Inject constructor(
         initialValue = NewsListUiState(isLoading = true)
     )
     
-    private val _stories = MutableStateFlow<List<Story>>(emptyList())
-    val stories: StateFlow<List<Story>> = _stories
+    // Stories flow that automatically switches when category changes
+    val stories: StateFlow<List<Story>> = _selectedCategory
+        .flatMapLatest { category ->
+            repository.getStoriesByCategory(category)
+        }
+        .stateIn(
+            scope = viewModelScope,
+            started = SharingStarted.WhileSubscribed(5000),
+            initialValue = emptyList()
+        )
+    
+    private var loadJob: Job? = null
     
     init {
         loadStoriesForCategory(StoryCategory.TOP)
     }
     
     fun selectCategory(category: StoryCategory) {
-        _selectedCategory.value = category
-        loadStoriesForCategory(category)
+        if (_selectedCategory.value != category) {
+            _selectedCategory.value = category
+            loadStoriesForCategory(category)
+        }
     }
     
     private fun loadStoriesForCategory(category: StoryCategory) {
-        viewModelScope.launch {
+        loadJob?.cancel()
+        loadJob = viewModelScope.launch {
             _isLoading.value = true
             _error.value = null
             
-            // First, try to load from cache
-            repository.getStoriesByCategory(category).collect { cachedStories ->
-                _stories.value = cachedStories
-                if (cachedStories.isEmpty()) {
-                    // No cache, fetch from network
-                    refreshStories()
-                } else {
-                    _isLoading.value = false
-                    // Refresh in background
-                    refreshStoriesInBackground()
+            // Check if we have cached stories
+            val hasCachedStories = repository.hasStoriesInCache(category)
+            
+            if (!hasCachedStories) {
+                // No cache, fetch from network first
+                val result = repository.refreshStories(category)
+                result.onFailure { e ->
+                    _error.value = e.message ?: "Failed to load stories"
                 }
+            } else {
+                // Refresh in background
+                refreshStoriesInBackground()
             }
+            
+            _isLoading.value = false
         }
     }
     
