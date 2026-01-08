@@ -45,15 +45,7 @@ class NewsListViewModel @Inject constructor(
         _isLoadingMore,
         _error,
         repository.newStoriesAvailable
-    ) { values ->
-        val category = values[0] as StoryCategory
-        val isLoading = values[1] as Boolean
-        val isRefreshing = values[2] as Boolean
-        val isLoadingMore = values[3] as Boolean
-        val error = values[4] as String?
-        @Suppress("UNCHECKED_CAST")
-        val newStoriesMap = values[5] as Map<StoryCategory, Int>
-        
+    ) { category, isLoading, isRefreshing, isLoadingMore, error, newStoriesMap ->
         NewsListUiState(
             isLoading = isLoading,
             isRefreshing = isRefreshing,

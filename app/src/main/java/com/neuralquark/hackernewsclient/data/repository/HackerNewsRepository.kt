@@ -26,6 +26,11 @@ class HackerNewsRepository @Inject constructor(
     private val commentDao: CommentDao
 ) {
     
+    companion object {
+        // Keep twice the limit to allow for pagination history
+        private const val STORY_RETENTION_MULTIPLIER = 2
+    }
+    
     // Track new stories that arrived while user is viewing list
     private val _newStoriesAvailable = MutableStateFlow<Map<StoryCategory, Int>>(emptyMap())
     val newStoriesAvailable: StateFlow<Map<StoryCategory, Int>> = _newStoriesAvailable
@@ -91,7 +96,7 @@ class HackerNewsRepository @Inject constructor(
             
             // Only clean up old stories on initial refresh (offset = 0)
             if (offset == 0) {
-                storyDao.deleteOldStories(category, allStoryIds.take(limit * 2))
+                storyDao.deleteOldStories(category, allStoryIds.take(limit * STORY_RETENTION_MULTIPLIER))
             }
             
             // Update new stories available count

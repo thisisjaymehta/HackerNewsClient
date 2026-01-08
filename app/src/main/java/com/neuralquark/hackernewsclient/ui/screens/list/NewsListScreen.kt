@@ -82,6 +82,9 @@ fun NewsListScreen(
     val scope = rememberCoroutineScope()
     val snackbarHostState = remember { SnackbarHostState() }
     
+    // Number of items from the end of list to trigger loading more
+    val paginationThreshold = 5
+    
     val categories = StoryCategory.entries
     val pagerState = rememberPagerState(
         initialPage = categories.indexOf(uiState.selectedCategory),
@@ -111,7 +114,7 @@ fun NewsListScreen(
         derivedStateOf {
             val lastVisibleItem = listState.layoutInfo.visibleItemsInfo.lastOrNull()?.index ?: 0
             val totalItems = listState.layoutInfo.totalItemsCount
-            lastVisibleItem >= totalItems - 5 && totalItems > 0 && !uiState.isLoading && !uiState.isLoadingMore
+            lastVisibleItem >= totalItems - paginationThreshold && totalItems > 0 && !uiState.isLoading && !uiState.isLoadingMore
         }
     }
     

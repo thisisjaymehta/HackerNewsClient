@@ -1,25 +1,14 @@
 package com.neuralquark.hackernewsclient.util
 
-import android.text.Html
-import android.os.Build
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.SpanStyle
 import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.style.TextDecoration
 import androidx.core.text.HtmlCompat
-import java.util.regex.Pattern
+import android.util.Patterns
 
 object HtmlUtils {
-    
-    private val URL_PATTERN = Pattern.compile(
-        "https?://[\\w\\-._~:/?#\\[\\]@!$&'()*+,;=%]+"
-    )
-    
-    private val HTML_LINK_PATTERN = Pattern.compile(
-        "<a\\s+href=[\"']([^\"']+)[\"'][^>]*>([^<]*)</a>",
-        Pattern.CASE_INSENSITIVE
-    )
     
     /**
      * Parse HTML content from HN comments/posts - returns plain string
@@ -35,29 +24,33 @@ object HtmlUtils {
     
     /**
      * Parse HTML content and return AnnotatedString with clickable links
+     * Uses Android's Patterns.WEB_URL for robust URL detection
      */
     fun parseHtmlWithLinks(html: String?, linkColor: Color): AnnotatedString {
         if (html.isNullOrBlank()) return AnnotatedString("")
         
-        // First convert HTML to plain text but preserve link info
+        // First convert HTML to plain text
         val plainText = HtmlCompat.fromHtml(
             html,
             HtmlCompat.FROM_HTML_MODE_LEGACY
         ).toString().trim()
         
-        // Extract links from original HTML
-        val links = mutableListOf<Triple<String, Int, Int>>() // url, start, end
-        val linkMatcher = HTML_LINK_PATTERN.matcher(html)
-        
         return buildAnnotatedString {
             append(plainText)
             
-            // Find URLs in the plain text and annotate them
-            val urlMatcher = URL_PATTERN.matcher(plainText)
+            // Find URLs in the plain text using Android's robust URL pattern
+            val urlMatcher = Patterns.WEB_URL.matcher(plainText)
             while (urlMatcher.find()) {
                 val start = urlMatcher.start()
                 val end = urlMatcher.end()
-                val url = urlMatcher.group()
+                val url = urlMatcher.group() ?: continue
+                
+                // Ensure URL has a scheme for proper handling
+                val fullUrl = if (!url.startsWith("http://") && !url.startsWith("https://")) {
+                    "https://$url"
+                } else {
+                    url
+                }
                 
                 addStyle(
                     style = SpanStyle(
@@ -69,7 +62,7 @@ object HtmlUtils {
                 )
                 addStringAnnotation(
                     tag = "URL",
-                    annotation = url,
+                    annotation = fullUrl,
                     start = start,
                     end = end
                 )
