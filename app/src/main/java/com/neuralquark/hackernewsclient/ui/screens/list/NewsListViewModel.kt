@@ -1,0 +1,117 @@
+package com.neuralquark.hackernewsclient.ui.screens.list
+
+import androidx.lifecycle.ViewModel
+import androidx.lifecycle.viewModelScope
+import com.neuralquark.hackernewsclient.data.model.Story
+import com.neuralquark.hackernewsclient.data.model.StoryCategory
+import com.neuralquark.hackernewsclient.data.repository.HackerNewsRepository
+import dagger.hilt.android.lifecycle.HiltViewModel
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.SharingStarted
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.stateIn
+import kotlinx.coroutines.launch
+import javax.inject.Inject
+
+data class NewsListUiState(
+    val stories: List<Story> = emptyList(),
+    val isLoading: Boolean = false,
+    val isRefreshing: Boolean = false,
+    val error: String? = null,
+    val selectedCategory: StoryCategory = StoryCategory.TOP,
+    val newStoriesCount: Int = 0
+)
+
+@HiltViewModel
+class NewsListViewModel @Inject constructor(
+    private val repository: HackerNewsRepository
+) : ViewModel() {
+    
+    private val _selectedCategory = MutableStateFlow(StoryCategory.TOP)
+    private val _isLoading = MutableStateFlow(false)
+    private val _isRefreshing = MutableStateFlow(false)
+    private val _error = MutableStateFlow<String?>(null)
+    
+    val uiState: StateFlow<NewsListUiState> = combine(
+        _selectedCategory,
+        _isLoading,
+        _isRefreshing,
+        _error,
+        repository.newStoriesAvailable
+    ) { category, isLoading, isRefreshing, error, newStoriesMap ->
+        val stories = repository.getStoriesByCategory(category)
+        NewsListUiState(
+            isLoading = isLoading,
+            isRefreshing = isRefreshing,
+            error = error,
+            selectedCategory = category,
+            newStoriesCount = newStoriesMap[category] ?: 0
+        )
+    }.stateIn(
+        scope = viewModelScope,
+        started = SharingStarted.WhileSubscribed(5000),
+        initialValue = NewsListUiState(isLoading = true)
+    )
+    
+    private val _stories = MutableStateFlow<List<Story>>(emptyList())
+    val stories: StateFlow<List<Story>> = _stories
+    
+    init {
+        loadStoriesForCategory(StoryCategory.TOP)
+    }
+    
+    fun selectCategory(category: StoryCategory) {
+        _selectedCategory.value = category
+        loadStoriesForCategory(category)
+    }
+    
+    private fun loadStoriesForCategory(category: StoryCategory) {
+        viewModelScope.launch {
+            _isLoading.value = true
+            _error.value = null
+            
+            // First, try to load from cache
+            repository.getStoriesByCategory(category).collect { cachedStories ->
+                _stories.value = cachedStories
+                if (cachedStories.isEmpty()) {
+                    // No cache, fetch from network
+                    refreshStories()
+                } else {
+                    _isLoading.value = false
+                    // Refresh in background
+                    refreshStoriesInBackground()
+                }
+            }
+        }
+    }
+    
+    fun refreshStories() {
+        viewModelScope.launch {
+            _isRefreshing.value = true
+            _error.value = null
+            
+            val result = repository.refreshStories(_selectedCategory.value)
+            result.onFailure { e ->
+                _error.value = e.message ?: "Failed to refresh stories"
+            }
+            
+            _isRefreshing.value = false
+            _isLoading.value = false
+        }
+    }
+    
+    private fun refreshStoriesInBackground() {
+        viewModelScope.launch {
+            repository.refreshStories(_selectedCategory.value)
+        }
+    }
+    
+    fun onNewStoriesViewed() {
+        repository.clearNewStoriesCount(_selectedCategory.value)
+    }
+    
+    fun clearError() {
+        _error.value = null
+    }
+}
