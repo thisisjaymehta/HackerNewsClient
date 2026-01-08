@@ -10,18 +10,21 @@ import androidx.work.PeriodicWorkRequestBuilder
 import androidx.work.WorkManager
 import androidx.work.WorkerParameters
 import com.neuralquark.hackernewsclient.data.model.StoryCategory
+import com.neuralquark.hackernewsclient.data.preferences.UserPreferencesRepository
 import com.neuralquark.hackernewsclient.data.repository.HackerNewsRepository
 import com.neuralquark.hackernewsclient.util.NotificationUtils
 import com.neuralquark.hackernewsclient.util.TimeUtils
 import dagger.assisted.Assisted
 import dagger.assisted.AssistedInject
+import kotlinx.coroutines.flow.first
 import java.util.concurrent.TimeUnit
 
 @HiltWorker
 class NewsSyncWorker @AssistedInject constructor(
     @Assisted context: Context,
     @Assisted params: WorkerParameters,
-    private val repository: HackerNewsRepository
+    private val repository: HackerNewsRepository,
+    private val userPreferencesRepository: UserPreferencesRepository
 ) : CoroutineWorker(context, params) {
     
     companion object {
@@ -68,6 +71,10 @@ class NewsSyncWorker @AssistedInject constructor(
     }
     
     private suspend fun checkAndNotifyHighScoreStories() {
+        // Check if notifications are enabled in settings
+        val preferences = userPreferencesRepository.userPreferences.first()
+        if (!preferences.notificationsEnabled) return
+        
         val highScoreStories = repository.getHighScoreUnnotifiedStories(HIGH_SCORE_THRESHOLD)
         
         if (highScoreStories.isEmpty()) return

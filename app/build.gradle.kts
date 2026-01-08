@@ -89,6 +89,12 @@ dependencies {
     // Coroutines
     implementation(libs.kotlinx.coroutines.android)
     
+    // Browser (Chrome Custom Tabs)
+    implementation(libs.androidx.browser)
+    
+    // DataStore
+    implementation(libs.androidx.datastore.preferences)
+    
     // Testing
     testImplementation(libs.junit)
     testImplementation(libs.kotlinx.coroutines.test)

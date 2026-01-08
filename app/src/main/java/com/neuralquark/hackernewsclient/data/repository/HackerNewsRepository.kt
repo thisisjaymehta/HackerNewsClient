@@ -52,27 +52,30 @@ class HackerNewsRepository @Inject constructor(
      */
     suspend fun refreshStories(
         category: StoryCategory,
-        limit: Int = 50
+        limit: Int = 50,
+        offset: Int = 0
     ): Result<Int> = withContext(Dispatchers.IO) {
         try {
-            val storyIds = when (category) {
+            val allStoryIds = when (category) {
                 StoryCategory.TOP -> api.getTopStories()
                 StoryCategory.NEW -> api.getNewStories()
                 StoryCategory.BEST -> api.getBestStories()
                 StoryCategory.ASK -> api.getAskStories()
                 StoryCategory.SHOW -> api.getShowStories()
                 StoryCategory.JOB -> api.getJobStories()
-            }.take(limit)
+            }
+            
+            val storyIds = allStoryIds.drop(offset).take(limit)
             
             // Get existing story IDs
             val existingIds = storyDao.getStoryIdsByCategory(category).toSet()
             
-            // Fetch story details in parallel
+            // Fetch story details in parallel, preserving order with index
             val stories = coroutineScope {
-                storyIds.map { id ->
+                storyIds.mapIndexed { index, id ->
                     async {
                         try {
-                            api.getItem(id)?.toStory(category)
+                            api.getItem(id)?.toStory(category, offset + index)
                         } catch (_: Exception) {
                             null
                         }
@@ -86,17 +89,31 @@ class HackerNewsRepository @Inject constructor(
             // Save to database
             storyDao.insertStories(stories)
             
-            // Clean up old stories not in the current list
-            storyDao.deleteOldStories(category, storyIds)
+            // Only clean up old stories on initial refresh (offset = 0)
+            if (offset == 0) {
+                storyDao.deleteOldStories(category, allStoryIds.take(limit * 2))
+            }
             
             // Update new stories available count
-            if (newStories.isNotEmpty()) {
+            if (newStories.isNotEmpty() && offset == 0) {
                 val currentMap = _newStoriesAvailable.value.toMutableMap()
                 currentMap[category] = (currentMap[category] ?: 0) + newStories.size
                 _newStoriesAvailable.value = currentMap
             }
             
             Result.success(newStories.size)
+        } catch (e: Exception) {
+            Result.failure(e)
+        }
+    }
+    
+    /**
+     * Load more stories (pagination)
+     */
+    suspend fun loadMoreStories(category: StoryCategory): Result<Int> = withContext(Dispatchers.IO) {
+        try {
+            val currentCount = storyDao.getStoryCount(category)
+            refreshStories(category, limit = 30, offset = currentCount)
         } catch (e: Exception) {
             Result.failure(e)
         }
@@ -180,5 +197,12 @@ class HackerNewsRepository @Inject constructor(
     
     suspend fun hasStoriesInCache(category: StoryCategory): Boolean {
         return storyDao.getStoryCount(category) > 0
+    }
+    
+    /**
+     * Get all stories for a category (for navigation between stories)
+     */
+    suspend fun getStoriesListByCategory(category: StoryCategory): List<Story> {
+        return storyDao.getStoriesByCategorySuspend(category)
     }
 }

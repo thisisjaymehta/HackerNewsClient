@@ -18,6 +18,7 @@ data class Story(
     val type: String,
     val text: String?, // for Ask HN, etc.
     val category: StoryCategory,
+    val orderIndex: Int = 0, // Preserve API order
     val fetchedAt: Long = System.currentTimeMillis(),
     val notified: Boolean = false
 )

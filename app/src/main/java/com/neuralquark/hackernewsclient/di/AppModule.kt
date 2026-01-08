@@ -58,7 +58,10 @@ object AppModule {
             context,
             HackerNewsDatabase::class.java,
             "hackernews_db"
-        ).build()
+        )
+            .addMigrations(HackerNewsDatabase.MIGRATION_1_2)
+            .fallbackToDestructiveMigration()
+            .build()
     }
     
     @Provides

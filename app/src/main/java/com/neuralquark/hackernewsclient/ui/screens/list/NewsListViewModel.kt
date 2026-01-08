@@ -20,6 +20,7 @@ import javax.inject.Inject
 data class NewsListUiState(
     val isLoading: Boolean = false,
     val isRefreshing: Boolean = false,
+    val isLoadingMore: Boolean = false,
     val error: String? = null,
     val selectedCategory: StoryCategory = StoryCategory.TOP,
     val newStoriesCount: Int = 0
@@ -34,18 +35,29 @@ class NewsListViewModel @Inject constructor(
     private val _selectedCategory = MutableStateFlow(StoryCategory.TOP)
     private val _isLoading = MutableStateFlow(true)
     private val _isRefreshing = MutableStateFlow(false)
+    private val _isLoadingMore = MutableStateFlow(false)
     private val _error = MutableStateFlow<String?>(null)
     
     val uiState: StateFlow<NewsListUiState> = combine(
         _selectedCategory,
         _isLoading,
         _isRefreshing,
+        _isLoadingMore,
         _error,
         repository.newStoriesAvailable
-    ) { category, isLoading, isRefreshing, error, newStoriesMap ->
+    ) { values ->
+        val category = values[0] as StoryCategory
+        val isLoading = values[1] as Boolean
+        val isRefreshing = values[2] as Boolean
+        val isLoadingMore = values[3] as Boolean
+        val error = values[4] as String?
+        @Suppress("UNCHECKED_CAST")
+        val newStoriesMap = values[5] as Map<StoryCategory, Int>
+        
         NewsListUiState(
             isLoading = isLoading,
             isRefreshing = isRefreshing,
+            isLoadingMore = isLoadingMore,
             error = error,
             selectedCategory = category,
             newStoriesCount = newStoriesMap[category] ?: 0
@@ -122,6 +134,21 @@ class NewsListViewModel @Inject constructor(
     private fun refreshStoriesInBackground() {
         viewModelScope.launch {
             repository.refreshStories(_selectedCategory.value)
+        }
+    }
+    
+    fun loadMore() {
+        if (_isLoadingMore.value || _isLoading.value) return
+        
+        viewModelScope.launch {
+            _isLoadingMore.value = true
+            
+            val result = repository.loadMoreStories(_selectedCategory.value)
+            result.onFailure { e ->
+                _error.value = e.message ?: "Failed to load more stories"
+            }
+            
+            _isLoadingMore.value = false
         }
     }
     

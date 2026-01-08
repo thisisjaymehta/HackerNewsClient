@@ -1,6 +1,5 @@
 package com.neuralquark.hackernewsclient.ui.theme
 
-import android.app.Activity
 import android.os.Build
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.material3.MaterialTheme
@@ -10,6 +9,7 @@ import androidx.compose.material3.dynamicLightColorScheme
 import androidx.compose.material3.lightColorScheme
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.platform.LocalContext
+import com.neuralquark.hackernewsclient.data.preferences.ThemeMode
 
 private val DarkColorScheme = darkColorScheme(
     primary = DarkPrimary,
@@ -41,19 +41,25 @@ private val LightColorScheme = lightColorScheme(
 
 @Composable
 fun HackerNewsClientTheme(
-    darkTheme: Boolean = isSystemInDarkTheme(),
-    // Dynamic color is available on Android 12+
-    dynamicColor: Boolean = false, // Disabled to use HN orange theme
+    themeMode: ThemeMode = ThemeMode.SYSTEM,
     content: @Composable () -> Unit
 ) {
-    val colorScheme = when {
-        dynamicColor && Build.VERSION.SDK_INT >= Build.VERSION_CODES.S -> {
-            val context = LocalContext.current
-            if (darkTheme) dynamicDarkColorScheme(context) else dynamicLightColorScheme(context)
+    val isSystemDark = isSystemInDarkTheme()
+    
+    val colorScheme = when (themeMode) {
+        ThemeMode.SYSTEM -> {
+            if (isSystemDark) DarkColorScheme else LightColorScheme
         }
-
-        darkTheme -> DarkColorScheme
-        else -> LightColorScheme
+        ThemeMode.LIGHT -> LightColorScheme
+        ThemeMode.DARK -> DarkColorScheme
+        ThemeMode.MATERIAL_YOU -> {
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+                val context = LocalContext.current
+                if (isSystemDark) dynamicDarkColorScheme(context) else dynamicLightColorScheme(context)
+            } else {
+                if (isSystemDark) DarkColorScheme else LightColorScheme
+            }
+        }
     }
 
     MaterialTheme(

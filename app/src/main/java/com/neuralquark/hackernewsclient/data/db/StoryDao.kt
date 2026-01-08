@@ -11,10 +11,10 @@ import kotlinx.coroutines.flow.Flow
 @Dao
 interface StoryDao {
     
-    @Query("SELECT * FROM stories WHERE category = :category ORDER BY fetchedAt DESC, score DESC")
+    @Query("SELECT * FROM stories WHERE category = :category ORDER BY orderIndex ASC")
     fun getStoriesByCategory(category: StoryCategory): Flow<List<Story>>
     
-    @Query("SELECT * FROM stories WHERE category = :category ORDER BY fetchedAt DESC, score DESC")
+    @Query("SELECT * FROM stories WHERE category = :category ORDER BY orderIndex ASC")
     suspend fun getStoriesByCategorySuspend(category: StoryCategory): List<Story>
     
     @Query("SELECT * FROM stories WHERE id = :id")
@@ -43,4 +43,7 @@ interface StoryDao {
     
     @Query("SELECT COUNT(*) FROM stories WHERE category = :category")
     suspend fun getStoryCount(category: StoryCategory): Int
+    
+    @Query("SELECT MAX(orderIndex) FROM stories WHERE category = :category")
+    suspend fun getMaxOrderIndex(category: StoryCategory): Int?
 }

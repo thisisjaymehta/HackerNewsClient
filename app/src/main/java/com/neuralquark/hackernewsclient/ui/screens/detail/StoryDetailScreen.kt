@@ -1,7 +1,8 @@
 package com.neuralquark.hackernewsclient.ui.screens.detail
 
-import android.content.Intent
-import android.net.Uri
+import android.graphics.Color as AndroidColor
+import androidx.compose.foundation.ExperimentalFoundationApi
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -16,8 +17,12 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.pager.HorizontalPager
+import androidx.compose.foundation.pager.rememberPagerState
+import androidx.compose.foundation.text.ClickableText
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.automirrored.filled.ArrowForward
 import androidx.compose.material.icons.filled.OpenInBrowser
 import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.ThumbUp
@@ -43,6 +48,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
@@ -50,6 +56,7 @@ import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.neuralquark.hackernewsclient.data.model.Comment
 import com.neuralquark.hackernewsclient.data.model.Story
+import com.neuralquark.hackernewsclient.util.ChromeTabsUtils
 import com.neuralquark.hackernewsclient.util.HtmlUtils
 import com.neuralquark.hackernewsclient.util.TimeUtils
 
@@ -58,11 +65,14 @@ import com.neuralquark.hackernewsclient.util.TimeUtils
 fun StoryDetailScreen(
     storyId: Long,
     onBackClick: () -> Unit,
+    onNavigateToStory: (Long) -> Unit = {},
     viewModel: StoryDetailViewModel = hiltViewModel()
 ) {
     val uiState by viewModel.uiState.collectAsState()
     val context = LocalContext.current
     val snackbarHostState = remember { SnackbarHostState() }
+    val primaryColor = MaterialTheme.colorScheme.primaryContainer.toArgb()
+    val linkColor = MaterialTheme.colorScheme.primary
     
     // Show error in snackbar
     LaunchedEffect(uiState.error) {
@@ -106,7 +116,15 @@ fun StoryDetailScreen(
                         .padding(paddingValues),
                     contentAlignment = Alignment.Center
                 ) {
-                    CircularProgressIndicator()
+                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                        CircularProgressIndicator()
+                        Spacer(modifier = Modifier.height(16.dp))
+                        Text(
+                            text = "Loading story...",
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
                 }
             }
             uiState.story == null -> {
@@ -138,8 +156,7 @@ fun StoryDetailScreen(
                         StoryHeader(
                             story = story,
                             onOpenUrl = { url ->
-                                val intent = Intent(Intent.ACTION_VIEW, Uri.parse(url))
-                                context.startActivity(intent)
+                                ChromeTabsUtils.openUrl(context, url, primaryColor)
                             }
                         )
                     }
@@ -158,18 +175,45 @@ fun StoryDetailScreen(
                             )
                             
                             if (uiState.isLoadingComments) {
-                                CircularProgressIndicator(
-                                    modifier = Modifier.size(20.dp),
-                                    strokeWidth = 2.dp
-                                )
+                                Row(verticalAlignment = Alignment.CenterVertically) {
+                                    CircularProgressIndicator(
+                                        modifier = Modifier.size(16.dp),
+                                        strokeWidth = 2.dp
+                                    )
+                                    Spacer(modifier = Modifier.width(8.dp))
+                                    Text(
+                                        text = "Loading comments...",
+                                        style = MaterialTheme.typography.bodySmall,
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                                    )
+                                }
                             }
                         }
                         
                         HorizontalDivider(modifier = Modifier.padding(top = 8.dp))
                     }
                     
-                    // Comments
-                    if (uiState.comments.isEmpty() && !uiState.isLoadingComments) {
+                    // Comments loading indicator
+                    if (uiState.isLoadingComments && uiState.comments.isEmpty()) {
+                        item {
+                            Box(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(32.dp),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                                    CircularProgressIndicator()
+                                    Spacer(modifier = Modifier.height(16.dp))
+                                    Text(
+                                        text = "Loading comments...",
+                                        style = MaterialTheme.typography.bodyMedium,
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                                    )
+                                }
+                            }
+                        }
+                    } else if (uiState.comments.isEmpty() && !uiState.isLoadingComments) {
                         item {
                             Text(
                                 text = "No comments yet",
@@ -186,7 +230,11 @@ fun StoryDetailScreen(
                             CommentCard(
                                 comment = comment,
                                 allComments = uiState.comments,
-                                depth = 0
+                                depth = 0,
+                                linkColor = linkColor,
+                                onLinkClick = { url ->
+                                    ChromeTabsUtils.openUrl(context, url, primaryColor)
+                                }
                             )
                         }
                     }
@@ -311,6 +359,8 @@ fun CommentCard(
     comment: Comment,
     allComments: List<Comment>,
     depth: Int,
+    linkColor: androidx.compose.ui.graphics.Color,
+    onLinkClick: (String) -> Unit,
     modifier: Modifier = Modifier
 ) {
     val maxDepth = 3
@@ -366,10 +416,22 @@ fun CommentCard(
                 
                 Spacer(modifier = Modifier.height(8.dp))
                 
-                // Comment text
-                Text(
-                    text = HtmlUtils.parseHtml(comment.text),
-                    style = MaterialTheme.typography.bodyMedium
+                // Comment text with clickable links
+                val annotatedText = HtmlUtils.parseHtmlWithLinks(comment.text, linkColor)
+                ClickableText(
+                    text = annotatedText,
+                    style = MaterialTheme.typography.bodyMedium.copy(
+                        color = MaterialTheme.colorScheme.onSurface
+                    ),
+                    onClick = { offset ->
+                        annotatedText.getStringAnnotations(
+                            tag = "URL",
+                            start = offset,
+                            end = offset
+                        ).firstOrNull()?.let { annotation ->
+                            onLinkClick(annotation.item)
+                        }
+                    }
                 )
             }
         }
@@ -382,7 +444,9 @@ fun CommentCard(
                 CommentCard(
                     comment = childComment,
                     allComments = allComments,
-                    depth = depth + 1
+                    depth = depth + 1,
+                    linkColor = linkColor,
+                    onLinkClick = onLinkClick
                 )
             }
         }

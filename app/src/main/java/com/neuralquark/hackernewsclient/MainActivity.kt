@@ -12,6 +12,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -19,14 +20,19 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.core.content.ContextCompat
 import androidx.navigation.compose.rememberNavController
+import com.neuralquark.hackernewsclient.data.preferences.UserPreferencesRepository
 import com.neuralquark.hackernewsclient.ui.navigation.HackerNewsNavGraph
 import com.neuralquark.hackernewsclient.ui.navigation.Screen
 import com.neuralquark.hackernewsclient.ui.theme.HackerNewsClientTheme
 import com.neuralquark.hackernewsclient.worker.NewsSyncWorker
 import dagger.hilt.android.AndroidEntryPoint
+import javax.inject.Inject
 
 @AndroidEntryPoint
 class MainActivity : ComponentActivity() {
+    
+    @Inject
+    lateinit var userPreferencesRepository: UserPreferencesRepository
     
     private val requestPermissionLauncher = registerForActivityResult(
         ActivityResultContracts.RequestPermission()
@@ -54,7 +60,11 @@ class MainActivity : ComponentActivity() {
             .takeIf { it != -1L }
         
         setContent {
-            HackerNewsClientTheme {
+            val userPreferences by userPreferencesRepository.userPreferences.collectAsState(
+                initial = com.neuralquark.hackernewsclient.data.preferences.UserPreferencesData()
+            )
+            
+            HackerNewsClientTheme(themeMode = userPreferences.themeMode) {
                 Surface(
                     modifier = Modifier.fillMaxSize(),
                     color = MaterialTheme.colorScheme.background

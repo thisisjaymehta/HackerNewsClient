@@ -21,7 +21,7 @@ data class HNItemResponse(
     val descendants: Int? = null
 )
 
-fun HNItemResponse.toStory(category: StoryCategory): Story? {
+fun HNItemResponse.toStory(category: StoryCategory, orderIndex: Int = 0): Story? {
     return if (type == "story" || type == "job" || type == "poll") {
         Story(
             id = id,
@@ -33,7 +33,8 @@ fun HNItemResponse.toStory(category: StoryCategory): Story? {
             descendants = descendants ?: 0,
             type = type ?: "story",
             text = text,
-            category = category
+            category = category,
+            orderIndex = orderIndex
         )
     } else null
 }

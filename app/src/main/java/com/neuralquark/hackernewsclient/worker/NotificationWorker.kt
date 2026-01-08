@@ -4,10 +4,12 @@ import android.content.Context
 import androidx.hilt.work.HiltWorker
 import androidx.work.CoroutineWorker
 import androidx.work.WorkerParameters
+import com.neuralquark.hackernewsclient.data.preferences.UserPreferencesRepository
 import com.neuralquark.hackernewsclient.data.repository.HackerNewsRepository
 import com.neuralquark.hackernewsclient.util.NotificationUtils
 import dagger.assisted.Assisted
 import dagger.assisted.AssistedInject
+import kotlinx.coroutines.flow.first
 
 /**
  * Worker that sends scheduled notifications for high score stories
@@ -17,11 +19,18 @@ import dagger.assisted.AssistedInject
 class NotificationWorker @AssistedInject constructor(
     @Assisted context: Context,
     @Assisted params: WorkerParameters,
-    private val repository: HackerNewsRepository
+    private val repository: HackerNewsRepository,
+    private val userPreferencesRepository: UserPreferencesRepository
 ) : CoroutineWorker(context, params) {
     
     override suspend fun doWork(): Result {
         return try {
+            // Check if notifications are enabled in settings
+            val preferences = userPreferencesRepository.userPreferences.first()
+            if (!preferences.notificationsEnabled) {
+                return Result.success()
+            }
+            
             val highScoreStories = repository.getHighScoreUnnotifiedStories(
                 NewsSyncWorker.HIGH_SCORE_THRESHOLD
             )

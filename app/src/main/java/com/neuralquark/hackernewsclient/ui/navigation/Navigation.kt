@@ -8,12 +8,14 @@ import androidx.navigation.compose.composable
 import androidx.navigation.navArgument
 import com.neuralquark.hackernewsclient.ui.screens.detail.StoryDetailScreen
 import com.neuralquark.hackernewsclient.ui.screens.list.NewsListScreen
+import com.neuralquark.hackernewsclient.ui.screens.settings.SettingsScreen
 
 sealed class Screen(val route: String) {
     data object NewsList : Screen("news_list")
     data object StoryDetail : Screen("story_detail/{storyId}") {
         fun createRoute(storyId: Long) = "story_detail/$storyId"
     }
+    data object Settings : Screen("settings")
 }
 
 @Composable
@@ -30,6 +32,9 @@ fun HackerNewsNavGraph(
             NewsListScreen(
                 onStoryClick = { storyId ->
                     navController.navigate(Screen.StoryDetail.createRoute(storyId))
+                },
+                onSettingsClick = {
+                    navController.navigate(Screen.Settings.route)
                 }
             )
         }
@@ -43,6 +48,17 @@ fun HackerNewsNavGraph(
             val storyId = backStackEntry.arguments?.getLong("storyId") ?: return@composable
             StoryDetailScreen(
                 storyId = storyId,
+                onBackClick = { navController.popBackStack() },
+                onNavigateToStory = { newStoryId ->
+                    navController.navigate(Screen.StoryDetail.createRoute(newStoryId)) {
+                        popUpTo(Screen.StoryDetail.route) { inclusive = true }
+                    }
+                }
+            )
+        }
+        
+        composable(Screen.Settings.route) {
+            SettingsScreen(
                 onBackClick = { navController.popBackStack() }
             )
         }
