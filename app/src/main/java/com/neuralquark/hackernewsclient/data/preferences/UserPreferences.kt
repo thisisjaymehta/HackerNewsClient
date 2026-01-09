@@ -24,7 +24,9 @@ enum class ThemeMode {
 
 data class UserPreferencesData(
     val notificationsEnabled: Boolean = true,
-    val themeMode: ThemeMode = ThemeMode.SYSTEM
+    val themeMode: ThemeMode = ThemeMode.SYSTEM,
+    val notificationStartHour: Int = 10, // Default: 10 AM
+    val notificationEndHour: Int = 18 // Default: 6 PM (18:00)
 )
 
 @Singleton
@@ -35,6 +37,8 @@ class UserPreferencesRepository @Inject constructor(
     private object PreferencesKeys {
         val NOTIFICATIONS_ENABLED = booleanPreferencesKey("notifications_enabled")
         val THEME_MODE = stringPreferencesKey("theme_mode")
+        val NOTIFICATION_START_HOUR = stringPreferencesKey("notification_start_hour")
+        val NOTIFICATION_END_HOUR = stringPreferencesKey("notification_end_hour")
     }
     
     val userPreferences: Flow<UserPreferencesData> = context.dataStore.data.map { preferences ->
@@ -44,7 +48,9 @@ class UserPreferencesRepository @Inject constructor(
                 ThemeMode.valueOf(preferences[PreferencesKeys.THEME_MODE] ?: ThemeMode.SYSTEM.name)
             } catch (_: Exception) {
                 ThemeMode.SYSTEM
-            }
+            },
+            notificationStartHour = preferences[PreferencesKeys.NOTIFICATION_START_HOUR]?.toIntOrNull() ?: 10,
+            notificationEndHour = preferences[PreferencesKeys.NOTIFICATION_END_HOUR]?.toIntOrNull() ?: 18
         )
     }
     
@@ -57,6 +63,18 @@ class UserPreferencesRepository @Inject constructor(
     suspend fun setThemeMode(themeMode: ThemeMode) {
         context.dataStore.edit { preferences ->
             preferences[PreferencesKeys.THEME_MODE] = themeMode.name
+        }
+    }
+    
+    suspend fun setNotificationStartHour(hour: Int) {
+        context.dataStore.edit { preferences ->
+            preferences[PreferencesKeys.NOTIFICATION_START_HOUR] = hour.toString()
+        }
+    }
+    
+    suspend fun setNotificationEndHour(hour: Int) {
+        context.dataStore.edit { preferences ->
+            preferences[PreferencesKeys.NOTIFICATION_END_HOUR] = hour.toString()
         }
     }
 }

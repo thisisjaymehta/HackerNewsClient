@@ -2,6 +2,7 @@ package com.neuralquark.hackernewsclient.ui.screens.settings
 
 import android.os.Build
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -19,6 +20,7 @@ import androidx.compose.material.icons.filled.LightMode
 import androidx.compose.material.icons.filled.Notifications
 import androidx.compose.material.icons.filled.Palette
 import androidx.compose.material.icons.filled.PhoneAndroid
+import androidx.compose.material.icons.filled.Schedule
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -28,6 +30,7 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.RadioButton
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.Slider
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
@@ -41,6 +44,7 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.neuralquark.hackernewsclient.data.preferences.ThemeMode
+import com.neuralquark.hackernewsclient.util.TimeUtils
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -86,33 +90,102 @@ fun SettingsScreen(
                     containerColor = MaterialTheme.colorScheme.surface
                 )
             ) {
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(16.dp),
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Icon(
-                        imageVector = Icons.Default.Notifications,
-                        contentDescription = null,
-                        tint = MaterialTheme.colorScheme.primary
-                    )
-                    Spacer(modifier = Modifier.width(16.dp))
-                    Column(modifier = Modifier.weight(1f)) {
-                        Text(
-                            text = "Push Notifications",
-                            style = MaterialTheme.typography.bodyLarge
+                Column {
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(16.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.Notifications,
+                            contentDescription = null,
+                            tint = MaterialTheme.colorScheme.primary
                         )
-                        Text(
-                            text = "Get notified about trending stories (500+ points)",
-                            style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        Spacer(modifier = Modifier.width(16.dp))
+                        Column(modifier = Modifier.weight(1f)) {
+                            Text(
+                                text = "Push Notifications",
+                                style = MaterialTheme.typography.bodyLarge
+                            )
+                            Text(
+                                text = "Get notified about trending stories (500+ points)",
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        }
+                        Switch(
+                            checked = preferences.notificationsEnabled,
+                            onCheckedChange = { viewModel.setNotificationsEnabled(it) }
                         )
                     }
-                    Switch(
-                        checked = preferences.notificationsEnabled,
-                        onCheckedChange = { viewModel.setNotificationsEnabled(it) }
-                    )
+                    
+                    // Notification time settings (only show if notifications enabled)
+                    if (preferences.notificationsEnabled) {
+                        HorizontalDivider(modifier = Modifier.padding(start = 56.dp))
+                        
+                        Column(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(16.dp)
+                        ) {
+                            Row(
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Default.Schedule,
+                                    contentDescription = null,
+                                    tint = MaterialTheme.colorScheme.primary
+                                )
+                                Spacer(modifier = Modifier.width(16.dp))
+                                Text(
+                                    text = "Quiet Hours",
+                                    style = MaterialTheme.typography.bodyLarge
+                                )
+                            }
+                            
+                            Spacer(modifier = Modifier.height(8.dp))
+                            
+                            Text(
+                                text = "Notifications will only be sent between ${TimeUtils.formatHour(preferences.notificationStartHour)} and ${TimeUtils.formatHour(preferences.notificationEndHour)}",
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                modifier = Modifier.padding(start = 40.dp)
+                            )
+                            
+                            Spacer(modifier = Modifier.height(16.dp))
+                            
+                            // Start time slider
+                            Text(
+                                text = "Start: ${TimeUtils.formatHour(preferences.notificationStartHour)}",
+                                style = MaterialTheme.typography.bodyMedium,
+                                modifier = Modifier.padding(start = 40.dp)
+                            )
+                            Slider(
+                                value = preferences.notificationStartHour.toFloat(),
+                                onValueChange = { viewModel.setNotificationStartHour(it.toInt()) },
+                                valueRange = 0f..23f,
+                                steps = 22,
+                                modifier = Modifier.padding(start = 40.dp, end = 16.dp)
+                            )
+                            
+                            Spacer(modifier = Modifier.height(8.dp))
+                            
+                            // End time slider
+                            Text(
+                                text = "End: ${TimeUtils.formatHour(preferences.notificationEndHour)}",
+                                style = MaterialTheme.typography.bodyMedium,
+                                modifier = Modifier.padding(start = 40.dp)
+                            )
+                            Slider(
+                                value = preferences.notificationEndHour.toFloat(),
+                                onValueChange = { viewModel.setNotificationEndHour(it.toInt()) },
+                                valueRange = 0f..23f,
+                                steps = 22,
+                                modifier = Modifier.padding(start = 40.dp, end = 16.dp)
+                            )
+                        }
+                    }
                 }
             }
             

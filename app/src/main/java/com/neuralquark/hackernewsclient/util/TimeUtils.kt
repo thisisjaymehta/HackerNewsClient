@@ -49,34 +49,49 @@ object TimeUtils {
     }
     
     /**
-     * Check if current time is within notification hours (9 AM to 8 PM)
+     * Check if current time is within notification hours
+     * @param startHour Start hour (inclusive) in 24-hour format
+     * @param endHour End hour (exclusive) in 24-hour format
      */
-    fun isWithinNotificationHours(): Boolean {
+    fun isWithinNotificationHours(startHour: Int = 10, endHour: Int = 18): Boolean {
         val calendar = java.util.Calendar.getInstance()
         val hour = calendar.get(java.util.Calendar.HOUR_OF_DAY)
-        return hour in 9..19 // 9 AM to 7:59 PM (8 PM exclusive)
+        return hour in startHour until endHour
     }
     
     /**
-     * Get delay until next notification window (9 AM)
+     * Get delay until next notification window
+     * @param startHour Start hour of notification window in 24-hour format
      */
-    fun getDelayUntilNotificationWindow(): Long {
+    fun getDelayUntilNotificationWindow(startHour: Int = 10): Long {
         val calendar = java.util.Calendar.getInstance()
         val currentHour = calendar.get(java.util.Calendar.HOUR_OF_DAY)
         
-        if (currentHour < 9) {
-            // Schedule for 9 AM today
-            calendar.set(java.util.Calendar.HOUR_OF_DAY, 9)
+        if (currentHour < startHour) {
+            // Schedule for startHour today
+            calendar.set(java.util.Calendar.HOUR_OF_DAY, startHour)
             calendar.set(java.util.Calendar.MINUTE, 0)
             calendar.set(java.util.Calendar.SECOND, 0)
         } else {
-            // Schedule for 9 AM tomorrow
+            // Schedule for startHour tomorrow
             calendar.add(java.util.Calendar.DAY_OF_YEAR, 1)
-            calendar.set(java.util.Calendar.HOUR_OF_DAY, 9)
+            calendar.set(java.util.Calendar.HOUR_OF_DAY, startHour)
             calendar.set(java.util.Calendar.MINUTE, 0)
             calendar.set(java.util.Calendar.SECOND, 0)
         }
         
         return calendar.timeInMillis - System.currentTimeMillis()
+    }
+    
+    /**
+     * Format hour to display string (e.g., 10 -> "10:00 AM", 18 -> "6:00 PM")
+     */
+    fun formatHour(hour: Int): String {
+        return when {
+            hour == 0 -> "12:00 AM"
+            hour < 12 -> "$hour:00 AM"
+            hour == 12 -> "12:00 PM"
+            else -> "${hour - 12}:00 PM"
+        }
     }
 }

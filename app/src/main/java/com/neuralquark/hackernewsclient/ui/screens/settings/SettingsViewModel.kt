@@ -35,4 +35,16 @@ class SettingsViewModel @Inject constructor(
             userPreferencesRepository.setThemeMode(themeMode)
         }
     }
+    
+    fun setNotificationStartHour(hour: Int) {
+        viewModelScope.launch {
+            userPreferencesRepository.setNotificationStartHour(hour)
+        }
+    }
+    
+    fun setNotificationEndHour(hour: Int) {
+        viewModelScope.launch {
+            userPreferencesRepository.setNotificationEndHour(hour)
+        }
+    }
 }

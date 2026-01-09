@@ -195,7 +195,13 @@ fun NewsListScreen(
                         selected = pagerState.currentPage == index,
                         onClick = {
                             scope.launch {
-                                pagerState.animateScrollToPage(index)
+                                if (pagerState.currentPage == index) {
+                                    // Already on this tab - scroll to top
+                                    listState.animateScrollToItem(0)
+                                } else {
+                                    // Switch to this tab
+                                    pagerState.animateScrollToPage(index)
+                                }
                             }
                         },
                         text = {

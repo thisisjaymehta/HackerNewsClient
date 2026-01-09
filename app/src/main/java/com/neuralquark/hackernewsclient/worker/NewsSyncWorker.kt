@@ -79,21 +79,21 @@ class NewsSyncWorker @AssistedInject constructor(
         
         if (highScoreStories.isEmpty()) return
         
-        // Check if we're in notification window
-        if (TimeUtils.isWithinNotificationHours()) {
+        // Check if we're in notification window using user-configured hours
+        if (TimeUtils.isWithinNotificationHours(preferences.notificationStartHour, preferences.notificationEndHour)) {
             // Send notification immediately
             highScoreStories.forEach { story ->
                 NotificationUtils.sendStoryNotification(applicationContext, story)
                 repository.markStoryAsNotified(story.id)
             }
         } else {
-            // Schedule notification for 9 AM
-            scheduleNotificationForMorning()
+            // Schedule notification for configured start hour
+            scheduleNotificationForMorning(preferences.notificationStartHour)
         }
     }
     
-    private fun scheduleNotificationForMorning() {
-        val delay = TimeUtils.getDelayUntilNotificationWindow()
+    private fun scheduleNotificationForMorning(startHour: Int = 10) {
+        val delay = TimeUtils.getDelayUntilNotificationWindow(startHour)
         
         val request = OneTimeWorkRequestBuilder<NotificationWorker>()
             .setInitialDelay(delay, TimeUnit.MILLISECONDS)
