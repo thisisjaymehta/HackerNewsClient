@@ -59,21 +59,26 @@ class StoryDetailViewModel @Inject constructor(
     }
     
     private fun loadComments() {
+        // Set loading state immediately
+        _uiState.value = _uiState.value.copy(isLoadingComments = true)
+        
+        // Collect from cache (will be updated when network fetch completes)
         viewModelScope.launch {
-            _uiState.value = _uiState.value.copy(isLoadingComments = true)
-            
-            // First load from cache
             repository.getCommentsForStory(storyId).collect { cachedComments ->
-                _uiState.value = _uiState.value.copy(
-                    comments = cachedComments,
-                    isLoadingComments = false
-                )
+                _uiState.value = _uiState.value.copy(comments = cachedComments)
             }
         }
         
-        // Refresh comments from network
+        // Trigger network refresh and wait for it to complete
         viewModelScope.launch {
-            repository.refreshComments(storyId)
+            val result = repository.refreshComments(storyId)
+            // Set loading to false only after network request completes
+            _uiState.value = _uiState.value.copy(isLoadingComments = false)
+            result.onFailure { e ->
+                _uiState.value = _uiState.value.copy(
+                    error = e.message ?: "Failed to load comments"
+                )
+            }
         }
     }
     
