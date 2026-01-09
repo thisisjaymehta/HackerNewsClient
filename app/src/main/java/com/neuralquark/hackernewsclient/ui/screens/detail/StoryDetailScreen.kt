@@ -1,5 +1,6 @@
 package com.neuralquark.hackernewsclient.ui.screens.detail
 
+import android.content.Intent
 import android.graphics.Color as AndroidColor
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.clickable
@@ -25,6 +26,7 @@ import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.ArrowForward
 import androidx.compose.material.icons.filled.OpenInBrowser
 import androidx.compose.material.icons.filled.Person
+import androidx.compose.material.icons.filled.Share
 import androidx.compose.material.icons.filled.ThumbUp
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
@@ -98,6 +100,27 @@ fun StoryDetailScreen(
                             imageVector = Icons.AutoMirrored.Filled.ArrowBack,
                             contentDescription = "Back"
                         )
+                    }
+                },
+                actions = {
+                    // Share button
+                    uiState.story?.let { story ->
+                        IconButton(
+                            onClick = {
+                                val shareUrl = story.url ?: "https://news.ycombinator.com/item?id=${story.id}"
+                                val shareIntent = Intent(Intent.ACTION_SEND).apply {
+                                    type = "text/plain"
+                                    putExtra(Intent.EXTRA_SUBJECT, story.title)
+                                    putExtra(Intent.EXTRA_TEXT, "${story.title}\n\n$shareUrl")
+                                }
+                                context.startActivity(Intent.createChooser(shareIntent, "Share Story"))
+                            }
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.Share,
+                                contentDescription = "Share"
+                            )
+                        }
                     }
                 },
                 colors = TopAppBarDefaults.topAppBarColors(
