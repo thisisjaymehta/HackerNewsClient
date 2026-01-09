@@ -41,7 +41,8 @@ class NotificationWorker @AssistedInject constructor(
             }
             
             Result.success()
-        } catch (_: Exception) {
+        } catch (e: Exception) {
+            android.util.Log.e("NotificationWorker", "Failed to send notifications", e)
             Result.retry()
         }
     }

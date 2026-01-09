@@ -15,6 +15,8 @@ import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
 import javax.inject.Inject
 import javax.inject.Singleton
@@ -29,6 +31,12 @@ class HackerNewsRepository @Inject constructor(
     companion object {
         // Keep twice the limit to allow for pagination history
         private const val STORY_RETENTION_MULTIPLIER = 2
+        
+        // Maximum number of comments to fetch per nesting level to prevent excessive API calls
+        private const val MAX_COMMENTS_PER_LEVEL = 20
+        
+        // Maximum nesting depth for comment threads to prevent deep recursion
+        private const val MAX_COMMENT_DEPTH = 3
     }
     
     // Track new stories that arrived while user is viewing list
@@ -140,7 +148,8 @@ class HackerNewsRepository @Inject constructor(
             
             // Recursively fetch comments
             val comments = mutableListOf<Comment>()
-            fetchCommentsRecursively(storyId, commentIds, comments, maxDepth = 3)
+            val mutex = Mutex()
+            fetchCommentsRecursively(storyId, commentIds, comments, mutex, maxDepth = MAX_COMMENT_DEPTH)
             
             // Save to database
             commentDao.insertComments(comments)
@@ -155,19 +164,20 @@ class HackerNewsRepository @Inject constructor(
         storyId: Long,
         commentIds: List<Long>,
         accumulator: MutableList<Comment>,
+        mutex: Mutex,
         maxDepth: Int,
         currentDepth: Int = 0
     ) {
         if (currentDepth >= maxDepth || commentIds.isEmpty()) return
         
         coroutineScope {
-            commentIds.take(20).map { id -> // Limit to avoid too many requests
+            commentIds.take(MAX_COMMENTS_PER_LEVEL).map { id ->
                 async {
                     try {
                         val item = api.getItem(id)
                         val comment = item?.toComment(storyId)
                         if (comment != null) {
-                            synchronized(accumulator) {
+                            mutex.withLock {
                                 accumulator.add(comment)
                             }
                             // Recursively fetch child comments
@@ -176,6 +186,7 @@ class HackerNewsRepository @Inject constructor(
                                     storyId,
                                     item.kids,
                                     accumulator,
+                                    mutex,
                                     maxDepth,
                                     currentDepth + 1
                                 )

@@ -62,6 +62,9 @@ import com.neuralquark.hackernewsclient.util.ChromeTabsUtils
 import com.neuralquark.hackernewsclient.util.HtmlUtils
 import com.neuralquark.hackernewsclient.util.TimeUtils
 
+// Maximum nesting depth for comment threads in the UI
+private const val MAX_COMMENT_UI_DEPTH = 3
+
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun StoryDetailScreen(
@@ -371,7 +374,6 @@ fun CommentCard(
     onLinkClick: (String) -> Unit,
     modifier: Modifier = Modifier
 ) {
-    val maxDepth = 3
     val indentPadding = (depth * 16).dp
     
     // Skip deleted or dead comments
@@ -445,7 +447,7 @@ fun CommentCard(
         }
         
         // Nested comments (up to max depth)
-        if (depth < maxDepth) {
+        if (depth < MAX_COMMENT_UI_DEPTH) {
             val childComments = allComments.filter { it.parent == comment.id }
             childComments.forEach { childComment ->
                 Spacer(modifier = Modifier.height(8.dp))

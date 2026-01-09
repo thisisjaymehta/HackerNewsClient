@@ -83,7 +83,8 @@ object HtmlUtils {
                 host = host.substring(4)
             }
             host
-        } catch (_: Exception) {
+        } catch (e: Exception) {
+            android.util.Log.d("HtmlUtils", "Failed to extract domain from URL: $url", e)
             null
         }
     }

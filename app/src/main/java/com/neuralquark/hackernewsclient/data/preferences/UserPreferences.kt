@@ -5,6 +5,7 @@ import androidx.datastore.core.DataStore
 import androidx.datastore.preferences.core.Preferences
 import androidx.datastore.preferences.core.booleanPreferencesKey
 import androidx.datastore.preferences.core.edit
+import androidx.datastore.preferences.core.intPreferencesKey
 import androidx.datastore.preferences.core.stringPreferencesKey
 import androidx.datastore.preferences.preferencesDataStore
 import dagger.hilt.android.qualifiers.ApplicationContext
@@ -37,8 +38,8 @@ class UserPreferencesRepository @Inject constructor(
     private object PreferencesKeys {
         val NOTIFICATIONS_ENABLED = booleanPreferencesKey("notifications_enabled")
         val THEME_MODE = stringPreferencesKey("theme_mode")
-        val NOTIFICATION_START_HOUR = stringPreferencesKey("notification_start_hour")
-        val NOTIFICATION_END_HOUR = stringPreferencesKey("notification_end_hour")
+        val NOTIFICATION_START_HOUR = intPreferencesKey("notification_start_hour")
+        val NOTIFICATION_END_HOUR = intPreferencesKey("notification_end_hour")
     }
     
     val userPreferences: Flow<UserPreferencesData> = context.dataStore.data.map { preferences ->
@@ -49,8 +50,8 @@ class UserPreferencesRepository @Inject constructor(
             } catch (_: Exception) {
                 ThemeMode.SYSTEM
             },
-            notificationStartHour = preferences[PreferencesKeys.NOTIFICATION_START_HOUR]?.toIntOrNull() ?: 10,
-            notificationEndHour = preferences[PreferencesKeys.NOTIFICATION_END_HOUR]?.toIntOrNull() ?: 18
+            notificationStartHour = preferences[PreferencesKeys.NOTIFICATION_START_HOUR] ?: 10,
+            notificationEndHour = preferences[PreferencesKeys.NOTIFICATION_END_HOUR] ?: 18
         )
     }
     
@@ -68,13 +69,13 @@ class UserPreferencesRepository @Inject constructor(
     
     suspend fun setNotificationStartHour(hour: Int) {
         context.dataStore.edit { preferences ->
-            preferences[PreferencesKeys.NOTIFICATION_START_HOUR] = hour.toString()
+            preferences[PreferencesKeys.NOTIFICATION_START_HOUR] = hour
         }
     }
     
     suspend fun setNotificationEndHour(hour: Int) {
         context.dataStore.edit { preferences ->
-            preferences[PreferencesKeys.NOTIFICATION_END_HOUR] = hour.toString()
+            preferences[PreferencesKeys.NOTIFICATION_END_HOUR] = hour
         }
     }
 }

@@ -11,18 +11,13 @@ import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
-import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.core.content.ContextCompat
 import androidx.navigation.compose.rememberNavController
 import com.neuralquark.hackernewsclient.data.preferences.UserPreferencesRepository
 import com.neuralquark.hackernewsclient.ui.navigation.HackerNewsNavGraph
-import com.neuralquark.hackernewsclient.ui.navigation.Screen
 import com.neuralquark.hackernewsclient.ui.theme.HackerNewsClientTheme
 import com.neuralquark.hackernewsclient.worker.NewsSyncWorker
 import dagger.hilt.android.AndroidEntryPoint
@@ -36,8 +31,12 @@ class MainActivity : ComponentActivity() {
     
     private val requestPermissionLauncher = registerForActivityResult(
         ActivityResultContracts.RequestPermission()
-    ) { _: Boolean ->
-        // Permission result handled
+    ) { isGranted: Boolean ->
+        // Permission result: if denied, notifications won't work but app continues normally
+        // Users can enable notifications later via system settings if needed
+        if (!isGranted) {
+            android.util.Log.d("MainActivity", "Notification permission denied. Notifications will be disabled.")
+        }
     }
     
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -70,22 +69,11 @@ class MainActivity : ComponentActivity() {
                     color = MaterialTheme.colorScheme.background
                 ) {
                     val navController = rememberNavController()
-                    var initialStoryHandled by remember { mutableStateOf(false) }
                     
                     HackerNewsNavGraph(
                         navController = navController,
-                        initialStoryId = if (!initialStoryHandled) storyIdFromNotification else null
+                        initialStoryId = storyIdFromNotification
                     )
-                    
-                    // Handle navigation to story from notification
-                    LaunchedEffect(storyIdFromNotification) {
-                        if (storyIdFromNotification != null && !initialStoryHandled) {
-                            navController.navigate(Screen.StoryDetail.createRoute(storyIdFromNotification)) {
-                                launchSingleTop = true
-                            }
-                            initialStoryHandled = true
-                        }
-                    }
                 }
             }
         }

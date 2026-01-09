@@ -1,6 +1,7 @@
 package com.neuralquark.hackernewsclient.ui.navigation
 
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.navigation.NavHostController
 import androidx.navigation.NavType
 import androidx.navigation.compose.NavHost
@@ -24,6 +25,15 @@ fun HackerNewsNavGraph(
     startDestination: String = Screen.NewsList.route,
     initialStoryId: Long? = null
 ) {
+    // Handle initial navigation from notification deep link
+    LaunchedEffect(initialStoryId) {
+        if (initialStoryId != null) {
+            navController.navigate(Screen.StoryDetail.createRoute(initialStoryId)) {
+                launchSingleTop = true
+            }
+        }
+    }
+    
     NavHost(
         navController = navController,
         startDestination = startDestination
@@ -61,13 +71,6 @@ fun HackerNewsNavGraph(
             SettingsScreen(
                 onBackClick = { navController.popBackStack() }
             )
-        }
-    }
-    
-    // Handle deep link from notification
-    initialStoryId?.let { storyId ->
-        navController.navigate(Screen.StoryDetail.createRoute(storyId)) {
-            launchSingleTop = true
         }
     }
 }

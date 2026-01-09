@@ -51,12 +51,12 @@ object TimeUtils {
     /**
      * Check if current time is within notification hours
      * @param startHour Start hour (inclusive) in 24-hour format
-     * @param endHour End hour (exclusive) in 24-hour format
+     * @param endHour End hour (inclusive) in 24-hour format
      */
     fun isWithinNotificationHours(startHour: Int = 10, endHour: Int = 18): Boolean {
         val calendar = java.util.Calendar.getInstance()
         val hour = calendar.get(java.util.Calendar.HOUR_OF_DAY)
-        return hour in startHour until endHour
+        return hour in startHour..endHour
     }
     
     /**

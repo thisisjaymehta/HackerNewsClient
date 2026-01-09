@@ -2,6 +2,7 @@ package com.neuralquark.hackernewsclient.di
 
 import android.content.Context
 import androidx.room.Room
+import com.neuralquark.hackernewsclient.BuildConfig
 import com.neuralquark.hackernewsclient.data.api.HackerNewsApi
 import com.neuralquark.hackernewsclient.data.db.CommentDao
 import com.neuralquark.hackernewsclient.data.db.HackerNewsDatabase
@@ -26,7 +27,12 @@ object AppModule {
     @Singleton
     fun provideOkHttpClient(): OkHttpClient {
         val logging = HttpLoggingInterceptor().apply {
-            level = HttpLoggingInterceptor.Level.BASIC
+            // Use BODY level in debug builds for easier debugging, BASIC otherwise
+            level = if (BuildConfig.DEBUG) {
+                HttpLoggingInterceptor.Level.BODY
+            } else {
+                HttpLoggingInterceptor.Level.BASIC
+            }
         }
         return OkHttpClient.Builder()
             .addInterceptor(logging)
@@ -60,6 +66,9 @@ object AppModule {
             "hackernews_db"
         )
             .addMigrations(HackerNewsDatabase.MIGRATION_1_2)
+            // Note: fallbackToDestructiveMigration is used during initial development phase.
+            // This means if a migration fails, user data will be deleted.
+            // For production release, consider proper migration strategies instead.
             .fallbackToDestructiveMigration()
             .build()
     }

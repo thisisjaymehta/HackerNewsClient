@@ -65,7 +65,8 @@ class NewsSyncWorker @AssistedInject constructor(
             checkAndNotifyHighScoreStories()
             
             Result.success()
-        } catch (_: Exception) {
+        } catch (e: Exception) {
+            android.util.Log.e("NewsSyncWorker", "News sync failed, will retry", e)
             Result.retry()
         }
     }

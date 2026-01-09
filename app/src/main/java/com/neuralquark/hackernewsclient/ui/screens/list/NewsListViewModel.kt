@@ -38,6 +38,15 @@ class NewsListViewModel @Inject constructor(
     private val _isLoadingMore = MutableStateFlow(false)
     private val _error = MutableStateFlow<String?>(null)
     
+    // Combine all UI state flows into a single state
+    // The combine vararg overload provides an Array<Any?> because Kotlin doesn't support more than 5 typed parameters
+    // Expected order of values in array:
+    // [0] - selectedCategory: StoryCategory
+    // [1] - isLoading: Boolean
+    // [2] - isRefreshing: Boolean
+    // [3] - isLoadingMore: Boolean
+    // [4] - error: String?
+    // [5] - newStoriesMap: Map<StoryCategory, Int>
     val uiState: StateFlow<NewsListUiState> = combine(
         _selectedCategory,
         _isLoading,

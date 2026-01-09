@@ -163,9 +163,15 @@ fun SettingsScreen(
                             )
                             Slider(
                                 value = preferences.notificationStartHour.toFloat(),
-                                onValueChange = { viewModel.setNotificationStartHour(it.toInt()) },
-                                valueRange = 0f..23f,
-                                steps = 22,
+                                onValueChange = { newValue ->
+                                    val newHour = newValue.toInt()
+                                    // Ensure start hour is at least 1 hour before end hour
+                                    if (newHour < preferences.notificationEndHour) {
+                                        viewModel.setNotificationStartHour(newHour)
+                                    }
+                                },
+                                valueRange = 0f..22f, // Max 22 to ensure at least 1 hour before max end (23)
+                                steps = 21,
                                 modifier = Modifier.padding(start = 40.dp, end = 16.dp)
                             )
                             
@@ -179,9 +185,15 @@ fun SettingsScreen(
                             )
                             Slider(
                                 value = preferences.notificationEndHour.toFloat(),
-                                onValueChange = { viewModel.setNotificationEndHour(it.toInt()) },
-                                valueRange = 0f..23f,
-                                steps = 22,
+                                onValueChange = { newValue ->
+                                    val newHour = newValue.toInt()
+                                    // Ensure end hour is at least 1 hour after start hour
+                                    if (newHour > preferences.notificationStartHour) {
+                                        viewModel.setNotificationEndHour(newHour)
+                                    }
+                                },
+                                valueRange = 1f..23f, // Min 1 to ensure at least 1 hour after min start (0)
+                                steps = 21,
                                 modifier = Modifier.padding(start = 40.dp, end = 16.dp)
                             )
                         }
